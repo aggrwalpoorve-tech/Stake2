@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Stake-like — All Games (Safe, Local)</title>
+<style>
+  :root{
+    --bg:#061621;
+    --panel:#0b2630;
+    --card:#0f2b33;
+    --muted:#98b4bf;
+    --accent:#00e676;
+    --accent2:#0be5ff;
+    --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,#04121a 0%, #061821 100%);color:#d9eef6}
+  .wrap{max-width:1080px;margin:12px auto;padding:12px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#0be5ff,#00e676);display:flex;align-items:center;justify-content:center;font-weight:900;color:#041b16}
+  h1{margin:0;font-size:18px}
+  .balance{display:flex;flex-direction:column;align-items:flex-end}
+  .balance .amt{font-weight:900;color:var(--accent);font-size:16px}
+  .small{color:var(--muted);font-size:13px}
+
+  .tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .tab{padding:10px 12px;border-radius:10px;background:var(--panel);text-align:center;font-weight:700;color:var(--muted);cursor:pointer;border:1px solid rgba(255,255,255,0.02)}
+  .tab.active{background:linear-gradient(90deg, rgba(0,230,118,0.12), rgba(11,229,255,0.06));color:#041b1e;box-shadow:0 8px 18px rgba(0,0,0,0.45)}
+
+  .main{display:grid;grid-template-columns:1fr 360px;gap:12px;margin-top:12px}
+  @media (max-width:980px){ .main{grid-template-columns:1fr} }
+
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .bet-box{display:flex;gap:8px;align-items:center}
+  input[type=number]{width:120px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-weight:700;text-align:center}
+  button.btn{background:linear-gradient(90deg,var(--accent),#13e69a);border:none;padding:12px 18px;border-radius:10px;font-weight:800;color:#042330;cursor:pointer;box-shadow:0 8px 20px rgba(0,230,118,0.08)}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;color:var(--muted);cursor:pointer}
+  .small-btn{padding:8px 10px;font-size:14px}
+
+  .game-area{min-height:420px;display:flex;flex-direction:column;gap:10px}
+  .meter{height:56px;border-radius:12px;background:var(--card);display:flex;align-items:center;padding:12px;gap:12px}
+  .stat-grid{display:flex;gap:8px}
+  .stat{background:var(--glass);padding:10px;border-radius:10px;min-width:0;flex:1;text-align:center}
+  .stat b{display:block;font-size:18px}
+
+  #minesGrid{display:grid;gap:8px;justify-content:center;margin:10px auto}
+  .tile{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;cursor:pointer;user-select:none}
+  .tile.hidden{background:linear-gradient(180deg,#071b22,#071219);color:transparent;border:1px solid rgba(255,255,255,0.03)}
+  .tile.mine{background:linear-gradient(180deg,#ffb3b3,#ff7b7b);color:#3a0000}
+  .tile.safe{background:linear-gradient(180deg,#dfffe1,#b9f3c8);color:#04300c}
+
+  canvas{width:100%;height:auto;border-radius:8px;background:transparent}
+
+  .leader{display:flex;flex-direction:column;gap:8px}
+  ol{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
+
+  .bottom-note{text-align:center;color:var(--muted);font-size:13px;margin-top:8px}
+  .row{display:flex;gap:8px;align-items:center}
+  .col{display:flex;flex-direction:column;gap:6px}
+  .center{justify-content:center;align-items:center}
+
+  /* responsive small tiles for mobile */
+  @media (max-width:420px){
+    .tile{width:44px;height:44px;font-size:16px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <h1>Stake-like — School Demo</h1>
+          <div class="small">Safe play — in-game coins only (local)</div>
+        </div>
+      </div>
+      <div class="balance">
+        <div class="amt" id="balanceDisplay">₹ 100</div>
+        <div class="small" style="text-align:right">Saved on this device</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="dice">Dice</div>
+      <div class="tab" data-tab="mines">Mines</div>
+      <div class="tab" data-tab="plinko">Plinko</div>
+      <div class="tab" data-tab="crash">Crash</div>
+      <div class="tab" data-tab="limbo">Limbo</div>
+      <div class="tab" data-tab="tower">Tower</div>
+      <div class="tab" data-tab="coinflip">Coinflip</div>
+    </div>
+
+    <div class="main">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;">
+          <div class="col" style="flex:1">
+            <div class="row controls">
+              <div class="bet-box">
+                <div class="small">Bet</div>
+                <input id="betInput" type="number" min="1" value="10" />
+                <button class="ghost small-btn" onclick="halfBet()">½</button>
+                <button class="ghost small-btn" onclick="doubleBet()">2×</button>
+                <button class="ghost small-btn" onclick="maxBet()">MAX</button>
+              </div>
+
+              <div style="margin-left:auto" class="row">
+                <button class="ghost small-btn" onclick="buyCoins()">Buy +100 (₹10)</button>
+                <button class="ghost small-btn" onclick="saveScore()">Save Score</button>
+              </div>
+            </div>
+
+            <div class="game-area" id="gameArea">
+              <!-- Game content injected here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong>Leaderboard (local)</strong>
+          <button class="ghost small-btn" onclick="clearLeaderboard()">Clear</button>
+        </div>
+        <div class="leader">
+          <ol id="leaderboardList"></ol>
+        </div>
+
+        <div style="margin-top:12px" class="panel" aria-hidden>
+          <div style="font-weight:700">How to play</div>
+          <div class="small" style="margin-top:6px">
+            Use tabs to switch games. Set a bet and press play. Coins are stored locally per device. Buy +100 is simulated — no real payments.
+          </div>
+          <div class="bottom-note">Made for school demo — fun only.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------------------------
+   Storage keys & state
+   --------------------------- */
+const KEY_BAL = 'sld_balance_v1';
+const KEY_LEAD = 'sld_leader_v1';
+
+let balance = Number(localStorage.getItem(KEY_BAL) ?? 100);
+let leaderboard = JSON.parse(localStorage.getItem(KEY_LEAD) || '[]');
+
+/* UI refs */
+const balanceDisplay = document.getElementById('balanceDisplay');
+const betInput = document.getElementById('betInput');
+const gameArea = document.getElementById('gameArea');
+const tabs = document.getElementById('tabs');
+const leaderboardList = document.getElementById('leaderboardList');
+
+function updateBalanceUI(){ balanceDisplay.innerText = '₹ ' + balance; localStorage.setItem(KEY_BAL,String(balance)); }
+updateBalanceUI();
+renderLeaderboard();
+
+/* Tab switching */
+tabs.addEventListener('click', e=>{
+  const t = e.target.closest('.tab');
+  if(!t) return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const name = t.dataset.tab;
+  showTab(name);
+});
+
+/* Quick bet helpers */
+function halfBet(){ let v = Math.floor(Number(betInput.value)||0); betInput.value = Math.max(1, Math.floor(v/2)); }
+function doubleBet(){ let v = Math.floor(Number(betInput.value)||0); betInput.value = Math.min(balance, Math.max(1, v*2)); }
+function maxBet(){ betInput.value = Math.max(1, balance); }
+
+/* Buy coins (simulated) */
+function buyCoins(){
+  if(!confirm('Simulate buying 100 coins for ₹10? (No real payment)')) return;
+  balance += 100; updateBalanceUI(); alert('Bought +100 coins (simulated). Enjoy!');
+}
+
+/* Leaderboard functions */
+function renderLeaderboard(){
+  leaderboardList.innerHTML = '';
+  leaderboard.forEach(item=>{
+    const li = document.createElement('li');
+    li.innerText = `${item.name}: ₹ ${item.coins}`;
+    leaderboardList.appendChild(li);
+  });
+}
+function saveScore(){
+  const name = prompt('Name for leaderboard (local):') || 'Player';
+  leaderboard.push({name, coins: balance});
+  leaderboard.sort((a,b)=>b.coins - a.coins);
+  leaderboard = leaderboard.slice(0,5);
+  localStorage.setItem(KEY_LEAD, JSON.stringify(leaderboard));
+  renderLeaderboard();
+  alert('Saved!');
+}
+function clearLeaderboard(){ if(!confirm('Clear local leaderboard?')) return; leaderboard=[]; localStorage.removeItem(KEY_LEAD); renderLeaderboard(); }
+
+/* Utility */
+function safeBet(){ const b = Math.floor(Number(betInput.value)||0); if(b < 1) return {ok:false, msg:'Enter a bet ≥ 1'}; if(b > balance) return {ok:false, msg:'Not enough coins'}; return {ok:true, bet:b}; }
+function showMessage(msg){ alert(msg); }
+
+/* ---------------------------
+   GAME PANELS & LOGIC
+   --------------------------- */
+
+/* DICE */
+function renderDice(){
+  gameArea.innerHTML = `
+    <div>
+      <div class="meter">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="flex:1">
+              <div class="small">Win Chance <b id="diceChanceDisplay">50%</b></div>
+              <input id="diceChance" type="range" min="1" max="99" value="50" />
+            </div>
+            <div style="min-width:180px;text-align:right">
+              <div class="small">Multiplier <b id="diceMult">1.98x</b></div>
+              <div class="small">Roll Over <b id="diceRoll">50.00</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="playDice()">Bet</button>
+        <button class="ghost" onclick="quickSetDice(50)">50%</button>
+        <button class="ghost" onclick="quickSetDice(25)">25%</button>
+        <button class="ghost" onclick="quickSetDice(75)">75%</button>
+      </div>
+
+      <div id="diceResult" class="small" style="margin-top:12px"></div>
+    </div>
+  `;
+  const diceChance = document.getElementById('diceChance');
+  const diceChanceDisplay = document.getElementById('diceChanceDisplay');
+  const diceMult = document.getElementById('diceMult');
+  const diceRoll = document.getElementById('diceRoll');
+
+  function updateDiceUI(){
+    const p = Number(diceChance.value);
+    diceChanceDisplay.innerText = p + '%';
+    const mult = (100 / p) * 0.99; // house factor
+    diceMult.innerText = mult.toFixed(3) + 'x';
+    diceRoll.innerText = p.toFixed(2);
+  }
+  diceChance.addEventListener('input', updateDiceUI);
+  updateDiceUI();
+}
+function quickSetDice(v){ const el = document.getElementById('diceChance'); if(el){ el.value = v; el.dispatchEvent(new Event('input')); } }
+
+function playDice(){
+  const check = safeBet(); if(!check.ok){ showMessage(check.msg); return; }
+  const bet = check.bet;
+  const pEl = document.getElementById('diceChance');
+  const p = Number(pEl.value);
+  const houseFactor = 0.99;
+  const mult = (100 / p) * houseFactor;
+  const roll = Math.random() * 100;
+  const resEl = document.getElementById('diceResult');
+  if(roll < p){
+    const payout = Math.round(bet * mult);
+    const profit = payout - bet;
+    balance += profit;
+    resEl.innerText = `Win! Rolled ${roll.toFixed(2)} < ${p}. Payout: ₹ ${payout} (profit ₹ ${profit})`;
+  } else {
+    balance -= bet;
+    if(balance < 0) balance = 0;
+    resEl.innerText = `Lose. Rolled ${roll.toFixed(2)} ≥ ${p}. Lost ₹ ${bet}`;
+  }
+  updateBalanceUI();
+}
+
+/* MINES */
+function renderMines(){
+  gameArea.innerHTML = `
+    <div>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Mines</div>
+          <input id="minesCount" type="range" min="1" max="8" value="3" />
+          <div class="small">Mines: <span id="minesCountDisplay">3</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="small">Grid: 5 × 5</div>
+          <div class="small">Reveal safe tiles. Cash out anytime.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div id="minesControls" class="row" style="gap:8px">
+          <button class="btn" onclick="startMinesRound()">Start Mines</button>
+          <button class="ghost" onclick="cashoutMines()" id="cashoutBtn" disabled>Cash Out</button>
+          <button class="ghost" onclick="resetMines()">Reset</button>
+        </div>
+      </div>
+
+      <div id="minesGridWrapper" style="margin-top:12px;text-align:center">
+        <div id="minesGrid"></div>
+        <div id="minesStatus" class="small" style="margin-top:8px">Not started</div>
+      </div>
+    </div>
+  `;
+  const minesCount = document.getElementById('minesCount');
+  const minesCountDisplay = document.getElementById('minesCountDisplay');
+  minesCount.addEventListener('input', ()=>{ minesCountDisplay.innerText = minesCount.value; });
+  minesCountDisplay.innerText = minesCount.value;
+  buildEmptyMinesGrid();
+}
+
+let minesState = {active:false, bet:0, mines:[], revealed:new Set(), safeRevealed:0, grid:5, cashMult:1};
+function buildEmptyMinesGrid(){
+  const grid = document.getElementById('minesGrid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = 'repeat(5, 56px)';
+}
+function startMinesRound(){
+  const check = safeBet(); if(!check.ok){ showMessage(check.msg); return; }
+  const bet = check.bet;
+  const minesCount = Number(document.getElementById('minesCount').value);
+  const total = 25;
+  const mines = new Set();
+  while(mines.size < minesCount) mines.add(Math.floor(Math.random() * total));
+  minesState = {active:true, bet, mines:Array.from(mines), revealed:new Set(), safeRevealed:0, grid:5, cashMult:1.0};
+  const grid = document.getElementById('minesGrid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${minesState.grid}, 56px)`;
+  for(let i=0;i<25;i++){
+    const d = document.createElement('div');
+    d.className = 'tile hidden';
+    d.dataset.idx = i;
+    d.addEventListener('click', ()=>revealTile(i,d));
+    grid.appendChild(d);
+  }
+  document.getElementById('minesStatus').innerText = 'Game started — reveal tiles or cash out';
+  document.getElementById('cashoutBtn').disabled = false;
+}
+function revealTile(i, el){
+  if(!minesState.active) return;
+  if(minesState.revealed.has(i)) return;
+  minesState.revealed.add(i);
+  if(minesState.mines.includes(i)){
+    el.classList.remove('hidden'); el.classList.add('mine'); el.innerText='💣';
+    document.getElementById('minesStatus').innerText = 'BOOM! You hit a mine. Bet lost.';
+    balance -= minesState.bet; if(balance<0) balance=0;
+    endMines(false);
+    updateBalanceUI();
+  } else {
+    el.classList.remove('hidden'); el.classList.add('safe'); el.innerText='✔';
+    minesState.safeRevealed += 1;
+    const base = 25 / (25 - minesState.mines.length);
+    minesState.cashMult = base * (1 + minesState.safeRevealed * 0.12);
+    document.getElementById('minesStatus').innerText = `Safe! Revealed ${minesState.safeRevealed}. Cashout x${minesState.cashMult.toFixed(2)}`;
+  }
+}
+function cashoutMines(){
+  if(!minesState.active){ showMessage('No active round'); return; }
+  const bet = minesState.bet;
+  const payout = Math.round(bet * minesState.cashMult);
+  const profit = payout - bet;
+  balance += profit;
+  document.getElementById('minesStatus').innerText = `Cashed out! You got ₹ ${payout} (profit ₹ ${profit})`;
+  endMines(true);
+  updateBalanceUI();
+}
+function endMines(success){
+  minesState.active = false;
+  const tiles = document.querySelectorAll('#minesGrid .tile');
+  minesState.mines.forEach(i=>{
+    const t = tiles[i];
+    if(t && !t.classList.contains('mine')){ t.classList.remove('hidden'); t.classList.add('mine'); t.innerText='💣'; }
+  });
+  document.getElementById('cashoutBtn').disabled = true;
+  setTimeout(()=>{ if(confirm('Save your coins to leaderboard?')) saveScore(); }, 600);
+}
+function resetMines(){
+  minesState = {active:false, bet:0, mines:[], revealed:new Set(), safeRevealed:0, grid:5, cashMult:1};
+  buildEmptyMinesGrid();
+  document.getElementById('minesStatus').innerText = 'Not started';
+  document.getElementById('cashoutBtn').disabled = true;
+}
+
+/* PLINKO */
+function renderPlinko(){
+  gameArea.innerHTML = `
+    <div>
+      <div class="small">Plinko</div>
+      <canvas id="plinkoCanvas" style="height:300px;"></canvas>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" onclick="playPlinko()">Drop Ball</button>
+        <button class="ghost" onclick="resetPlinko()">Reset</button>
+      </div>
+      <div id="plinkoResult" class="small" style="margin-top:8px"></div>
+    </div>
+  `;
+  setupPlinkoCanvas();
+}
+let plinkoState = {ctx:null,w:0,h:0};
+function setupPlinkoCanvas(){
+  const c = document.getElementById('plinkoCanvas');
+  c.width = c.clientWidth * devicePixelRatio;
+  c.height = 300 * devicePixelRatio;
+  c.style.width = '100%';
+  c.style.height = '300px';
+  const ctx = c.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  plinkoState.ctx = ctx; plinkoState.w = c.clientWidth; plinkoState.h = 300;
+  drawPlinkoStatic();
+}
+function drawPlinkoStatic(){
+  const ctx = plinkoState.ctx; if(!ctx) return;
+  ctx.clearRect(0,0,plinkoState.w,plinkoState.h);
+  ctx.fillStyle = '#051018'; ctx.fillRect(0,0,plinkoState.w,plinkoState.h);
+  // draw slots and labels
+  const slots = 7;
+  for(let i=0;i<slots;i++){
+    const x = 20 + i*(plinkoState.w-40)/(slots-1);
+    ctx.fillStyle = '#08323a';
+    ctx.fillRect(x-28, plinkoState.h-60, 56, 56);
+    ctx.fillStyle = '#0be5ff';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    const mult = (1 + i*0.5).toFixed(2);
+    ctx.fillText(`${mult}x`, x, plinkoState.h-28);
+  }
+}
+function playPlinko(){
+  const check = safeBet(); if(!check.ok){ showMessage(check.msg); return; }
+  const bet = check.bet;
+  const slot = Math.floor(Math.random()*7);
+  const mult = 1 + slot * 0.5;
+  const payout = Math.round(bet * mult);
+  const profit = payout - bet;
+  document.getElementById('plinkoResult').innerText = `Ball landed in slot ${slot+1} — multiplier ${mult.toFixed(2)}x — Payout ₹ ${payout}`;
+  balance += profit; updateBalanceUI();
+}
+function resetPlinko(){ drawPlinkoStatic(); document.getElementById('plinkoResult').innerText = ''; }
+
+/* CRASH */
+function renderCrash(){
+  gameArea.innerHTML = `
+    <div>
+      <div class="small">Crash</div>
+      <canvas id="crashCanvas" style="height:220px;"></canvas>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <button class="ghost" onclick="startCrash()">Start Round</button>
+        <button class="btn" onclick="cashoutCrash()">Cash Out</button>
+      </div>
+      <div id="crashStatus" class="small" style="margin-top:8px"></div>
+    </div>
+  `;
+  setupCrash();
+}
+let crashState = {running:false,current:1.00,interval:null,stopAt:0,bet:0};
+function setupCrash(){
+  const c = document.getElementById('crashCanvas');
+  c.width = c.clientWidth * devicePixelRatio;
+  c.height = 220 * devicePixelRatio;
+  c.style.width = '100%'; c.style.height = '220px';
+  const ctx = c.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.clearRect(0,0,c.clientWidth,c.clientHeight);
+  ctx.fillStyle = '#07121a';
+  ctx.fillRect(0,0,c.clientWidth,c.clientHeight);
+  ctx.fillStyle = '#8
